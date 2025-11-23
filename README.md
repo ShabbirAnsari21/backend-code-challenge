@@ -119,6 +119,39 @@ commit the code as task-2
 
 **Question 5:** Explain your testing strategy and the tools you chose.
 
+My testing strategy was focused on isolating and validating all business rules inside the `MessageLogic` class.
+
+Tools used:
+- **xUnit**: Test framework  
+- **Moq**: To mock `IMessageRepository` and simulate DB behavior  
+- **FluentAssertions**: For expressive, readable assertions  
+
+Strategy:
+- Mocked repository responses (existing message, no message, inactive message, etc.)
+- Asserted that correct `Result` types (`Created`, `Conflict`, `ValidationError`, etc.) are returned for each scenario
+- Ensured coverage of all required validation paths and edge cases
+
+This ensures the logic layer behaves correctly independently from the API layer.
+
 **Question 6:** What other scenarios would you test in a real-world application?
+
+In a real application, I would add:
+
+### Additional Unit Tests
+- Boundary tests (3/200 chars for title, 10/1000 chars for content)
+- Duplicate title when updating a message
+- `UpdatedAt` is properly set after update
+- Behavior when toggling `IsActive`
+- Whitespace-only title/content
+
+### Integration Tests
+- Repository tests using an in-memory or SQLite DB
+- Controller tests with WebApplicationFactory
+
+### API Tests (End-to-end)
+- Using Postman/Newman or Playwright  
+- Full request/response validation  
+
+These tests provide confidence in correctness, reliability, and resilience.
 
 commit the code as task-3
