@@ -1,5 +1,5 @@
+using CodeChallenge.Api.Logic;
 using CodeChallenge.Api.Models;
-using CodeChallenge.Api.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CodeChallenge.Api.Controllers;
@@ -9,77 +9,60 @@ namespace CodeChallenge.Api.Controllers;
 [Route("api/v1/organizations/{organizationId}/messages")]
 public class MessagesController : ControllerBase
 {
-    private readonly IMessageRepository _repository;
-    private readonly ILogger<MessagesController> _logger;
+    private readonly IMessageLogic _logic;
 
-    public MessagesController(IMessageRepository repository, ILogger<MessagesController> logger)
+    public MessagesController(IMessageLogic logic)
     {
-        _repository = repository;
-        _logger = logger;
+        _logic = logic;
     }
 
-    // GET all messages
+    private ActionResult FromResult(Result result)
+    {
+        return result switch
+        {
+            Created<Message> c => CreatedAtAction(nameof(GetById),
+                new { organizationId = c.Value.OrganizationId, id = c.Value.Id }, c.Value),
+
+            Updated => NoContent(),
+            Deleted => NoContent(),
+
+            NotFound nf => NotFound(new { message = nf.Message }),
+            Conflict cf => Conflict(new { message = cf.Message }),
+            ValidationError ve => BadRequest(ve.Errors),
+
+            _ => BadRequest()
+        };
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Message>>> GetAll(Guid organizationId)
-    {
-        var messages = await _repository.GetAllByOrganizationAsync(organizationId);
-        return Ok(messages);
-    }
+        => Ok(await _logic.GetAllMessagesAsync(organizationId));
 
-    // GET message by ID
     [HttpGet("{id}")]
     public async Task<ActionResult<Message>> GetById(Guid organizationId, Guid id)
     {
-        var message = await _repository.GetByIdAsync(organizationId, id);
-        if (message == null)
-            return NotFound();
-
-        return Ok(message);
+        var msg = await _logic.GetMessageAsync(organizationId, id);
+        return msg is null ? NotFound() : Ok(msg);
     }
 
-    // CREATE message
     [HttpPost]
-    public async Task<ActionResult<Message>> Create(Guid organizationId, [FromBody] CreateMessageRequest request)
+    public async Task<ActionResult> Create(Guid organizationId, CreateMessageRequest request)
     {
-        var newMessage = new Message
-        {
-            OrganizationId = organizationId,
-            Title = request.Title,
-            Content = request.Content,
-            IsActive = true
-        };
-
-        var created = await _repository.CreateAsync(newMessage);
-        return CreatedAtAction(nameof(GetById), new { organizationId, id = created.Id }, created);
+        var result = await _logic.CreateMessageAsync(organizationId, request);
+        return FromResult(result);
     }
 
-    // UPDATE message
     [HttpPut("{id}")]
-    public async Task<ActionResult> Update(Guid organizationId, Guid id, [FromBody] UpdateMessageRequest request)
+    public async Task<ActionResult> Update(Guid organizationId, Guid id, UpdateMessageRequest request)
     {
-        var existing = await _repository.GetByIdAsync(organizationId, id);
-        if (existing == null)
-            return NotFound();
-
-        existing.Title = request.Title;
-        existing.Content = request.Content;
-        existing.IsActive = request.IsActive;
-
-        var updated = await _repository.UpdateAsync(existing);
-        if (updated == null)
-            return NotFound();
-
-        return NoContent();
+        var result = await _logic.UpdateMessageAsync(organizationId, id, request);
+        return FromResult(result);
     }
 
-    // DELETE message
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(Guid organizationId, Guid id)
     {
-        var success = await _repository.DeleteAsync(organizationId, id);
-        if (!success)
-            return NotFound();
-
-        return NoContent();
+        var result = await _logic.DeleteMessageAsync(organizationId, id);
+        return FromResult(result);
     }
 }
