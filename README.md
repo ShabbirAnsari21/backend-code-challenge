@@ -72,8 +72,34 @@ These improvements create a more robust and scalable foundation.
 4. Update Controller to use `IMessageLogic` instead of directly using the repository
 
 **Question 3:** How did you approach the validation requirements and why?
+I placed all validation rules inside the `MessageLogic` class because the logic layer is responsible for enforcing business rules. This ensures consistent validation regardless of how the API endpoints change.
+
+My approach:
+- Validate title and content lengths using conditional checks.
+- Use the repository to check for duplicate titles per organization.
+- Check message state (`IsActive`) before allowing updates or deletions.
+- Return appropriate `Result` objects (`ValidationError`, `Conflict`, `NotFound`, etc.).
+- Keep the controller thin and focused only on handling HTTP concerns.
+
+This approach aligns with Clean Architecture principles and makes the logic layer highly testable for Task-3.
+
+---
 
 **Question 4:** What changes would you make to this implementation for a production environment?
+
+For production, I would:
+1. Replace the in-memory repository with a real SQL/NoSQL database.
+2. Add database-level uniqueness constraints for message titles.
+3. Use FluentValidation for cleaner, reusable validation logic.
+4. Add authentication/authorization (JWT or OAuth).
+5. Add structured logging (Serilog) and distributed tracing (OpenTelemetry).
+6. Add error-handling middleware for consistent API errors.
+7. Use DTOs + AutoMapper to avoid leaking domain models.
+8. Introduce pagination on the GET endpoints.
+9. Implement soft delete or archival instead of physical deletion.
+10. Add transactional consistency for multi-step operations.
+
+These changes would make the solution production-ready, scalable, and secure.
 
 commit the code as task-2
 
